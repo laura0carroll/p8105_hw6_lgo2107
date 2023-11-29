@@ -86,3 +86,206 @@ compact_boot_results =
   
 compact_boot_results
 ```
+
+Importantly, because many of the $\hat{\beta_2}$ values calculated are negative, the $log(\hat{\beta_1} * \hat{\beta_2})$ value is going to be `NaN` for these samples, and therefore will be eliminated when plotting the distribution.
+
+```{r}
+compact_boot_results |> 
+  ggplot(aes(x = r.squared)) + 
+  geom_density()
+```
+
+The distribution of the $\hat{r^2}$ values is negatively skewed, with the mode existing around 0.94.
+
+```{r}
+compact_boot_results |> 
+  ggplot(aes(x = log_b1_b2)) +
+  geom_density()
+```
+
+The distribution of the $log(\hat{\beta_1} * \hat{\beta_2})$ values is also negatively skewed, with the mode existing approximently -5.5.
+
+```{r}
+compact_boot_results |> 
+  summarize(
+    rsq_ci_lower = quantile(r.squared, 0.025),
+    rsq_ci_upper = quantile(r.squared, 0.975),
+    log_beta_ci_lower = quantile(log_b1_b2, 0.025, na.rm = TRUE),
+    log_beta_ci_upper = quantile(log_b1_b2, 0.975, na.rm = TRUE)
+  ) |> 
+  knitr::kable(digits = 3)
+```
+
+The estimate of $\hat{r^2}$ is `r compact_boot_results |> summarize(mean(r.squared))`, 95% CI [`r compact_boot_results |>  summarize(quantile(r.squared, 0.025))`, `r compact_boot_results |>  summarize(quantile(r.squared, 0.975))`]. The estimate of $log(\hat{\beta_1} * \hat{\beta_2})$ is `r compact_boot_results |> summarize(mean(log_b1_b2, na.rm = TRUE))`, 95% CI [`r compact_boot_results |>  summarize(quantile(log_b1_b2, 0.025, na.rm = TRUE))`, `r compact_boot_results |>  summarize(quantile(log_b1_b2, 0.975, na.rm = TRUE))`]. 
+
+It's important to note that because the value of $log(\hat{\beta_1} * \hat{\beta_2})$ is the result of trying to take the logarithm of a negative number, these are `NaN` and are not included when calculating the estimate and confidence interval. 
+
+## Problem 3
+
+Now we will analyze data to understand the effect of several variables on a child's birthweight. 
+
+First I'll load and tidy the data. 
+
+```{r}
+
+birthweight_df = 
+  read_csv("data/birthweight.csv") |> 
+  mutate(
+    babysex = case_match(
+    babysex,
+    1 ~ "male",
+    2 ~ "female"
+  ),
+  babysex = as.factor(babysex),
+  frace = case_match(
+    frace,
+    1 ~ "white",
+    2 ~ "black",
+    3 ~ "asian",
+    4 ~ "puerto rican",
+    8 ~ "other",
+    9 ~ "unknown"
+  ),
+  frace = as.factor(frace),
+  malform = case_match(
+    malform, 
+    0 ~ "absent",
+    1 ~ "present"
+  ),
+  malform = as.factor(malform),
+  mrace = case_match(
+    mrace,
+    1 ~ "white",
+    2 ~ "black",
+    3 ~ "asian",
+    4 ~ "puerto rican",
+    8 ~ "other",
+  ),
+  mrace = as.factor(mrace), 
+  bwt_lbs = bwt* 0.00225,
+  mheight_cm = mheight * 2.54,
+  fincome_full = fincome * 100)
+
+
+birthweight_df |> 
+  summarise(across(everything(), ~ sum(is.na(.x))))
+
+birthweight_df
+```
+
+The model has `r nrow(birthweight_df)` observations and `r ncol(birthweight_df)` variables named `r print(colnames(birthweight_df))`.
+
+To build a model that predicts birth weight ('bwt'), I will consider factors that reflect the mother's demographics, with the theory that the mother's socioeconomic factors are major drivers of heath and heathcare access. I will evaluate the impact of the mother's weight at delivery, the family's monthly income, the mother's height, the mother's age at delivery, and the mother's race. 
+
+This model will be named `fit_one`. 
+
+```{r, fit_one}
+fit_one = lm(bwt ~ delwt + fincome + mheight + momage + mrace, data = birthweight_df) 
+
+fit_one %>%
+  broom::tidy() %>%
+  knitr::kable()
+```
+
+Next I will interpret the model: 
+
+The following variables were found to be signifcantly associated with birthweight: the mother's weight at delivery (p-value = < 0.0000), the mother's height (p-value = 0.0002), and if the mother was Black (p-value = < 0.0000). Other mothers' races, the family income, and the mothers age at birth were not significantly associated at a 95% confidence interval. 
+
+* The expected change per pound increase in mother's weight at delivery is an increase in birth weight of 6.15 grams, with all other predictors held constant. 
+
+* The expected change per one inch increase in maternal height at delivery is an increase in birth weight of 11.18 grams, with all other predictors held constant. 
+
+* The expected change if the mother is Black is a decrease of 327.5 grams, with all other predictors held constant. 
+
+```{r}
+birthweight_df %>%
+  modelr::add_residuals(fit_one) %>%
+  modelr::add_predictions(fit_one) %>%
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point()
+```
+
+
+Here we demonstrate a plot of the model's predicted values for birthweight plotted against the residual values from my model. There is wide variability to the residuals, with most from -1000 to +1000, and most of the predicted values being between 2500 and 3500 grams for birthweight. 
+
+
+Next we will construct the models described by the homework. 
+
+The Main model will be named `fit_two`, and predicts birthweight from baby's length at birth and gestational age in weeks. 
+
+```{r model_two}
+fit_two = lm(bwt ~ blength + gaweeks, data = birthweight_df)
+fit_two %>%
+  broom::tidy() %>%
+  knitr::kable()
+
+birthweight_df %>%
+  modelr::add_residuals(fit_two) %>%
+  modelr::add_predictions(fit_two) %>%
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point() 
+```
+
+Model interpretations:
+
+For each additional increase of baby's birth length of 1 centimeter, the estimated change in birth weight is 128.56 gram increase, all other predictors held constant. 
+
+For each additional gestational week of age, the estimated change in birth weight is 27.05 gram increase, all other predictors held constant. 
+
+For the residual plot, compared to my model the residuals are somewhat tighter with a range between 1000 and -1000, but with wider spread for predicted birth weight between about 2000 and 4000 grams. 
+
+
+The next model will be named `fit_three`, and predicts birthweight from baby's head circumference, baby's length at birth, the sex of the baby, and interaction terms amongst them all: baby's head circumference * baby's length at birth, baby's head circumference * sex of baby, baby's length at birth * baby's sex, and baby's head circumference * baby's length at birth * baby's sex. 
+
+```{r model_three}
+fit_three = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = birthweight_df)
+
+fit_three %>%
+  broom::tidy() %>%
+  knitr::kable()
+
+birthweight_df %>%
+  modelr::add_residuals(fit_three) %>%
+  modelr::add_predictions(fit_three) %>%
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point()
+```
+
+To interpret the changes per value, we must now consider the value of the predictor's Beta, as well as the interaction terms. 
+
+When compared to the prior two models, the residual range is a bit tighter now primarily focused in -500 to +500 range, with still a wide range of predicted values similar to the main model from about 2000 to 4000. 
+
+
+Next we will set up cross validation of 100 splits. This will include variables for the each of the three above models, mapping the models across the cross-validation dataframe. We will then then calculate the root mean squared errors (RMSE) for each of those models by mapping across them. 
+
+```{r, cross validation}
+cv_df = 
+  crossv_mc(birthweight_df, 100) 
+
+cv_df = 
+  cv_df |> 
+  mutate(
+    fit_one  = map(train, \(df) lm(bwt ~ delwt + fincome + mheight + momage + mrace, data = df)), #fit_one = lm(bwt ~ delwt + fincome + mheight + momage + mrace, data = birthweight_df) 
+    fit_two  = map(train, \(df) lm(bwt ~ blength + gaweeks, data = df)), #fit_two = lm(bwt ~ blength + gaweeks, data = birthweight_df)
+    fit_three  = map(train, \(df) lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = df))) |>  #fit_three = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = birthweight_df)
+  mutate(
+    rmse_one = map2_dbl(fit_one, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_two = map2_dbl(fit_two, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_three = map2_dbl(fit_three, test, \(mod, df) rmse(model = mod, data = df)))
+```
+
+Lastly we will plot the density of the RMSE of the cross-validations to see which model is optimal. 
+
+```{r, density plot}
+cv_df |> 
+  select(starts_with("rmse")) |> 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") |> 
+  mutate(model = fct_inorder(model)) |> 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
+
+My own model had the highest RMSE, which suggests that it was the least accurate when compared to model two and model three. Model three, which considered the interactions of several variables, had the lowest RMSE and therefore was the most accurate. 
