@@ -9,7 +9,80 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
+library(p8105.datasets)
+library(modelr)
+library(mgcv)
 ```
 
 ## Problem 2
 
+First we will download the data. 
+
+```{r download}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2022-01-01",
+    date_max = "2022-12-31") |>
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) |>
+  select(name, id, everything())
+```
+
+Let's draw 5000 bootstrap samples and test the distribution of two quantities estimated from these data: 
+
+* r̂2
+* log(β̂1∗β̂2)
+
+First make the function. 
+```{r}
+boot_sample = function(df) {
+  sample_frac(df, replace = TRUE)
+}
+```
+
+Then let's pull 5000 samples. 
+```{r}
+boot_straps = 
+  tibble(strap_number = 1:5000) |> 
+  mutate(
+    strap_sample = map(strap_number, \(i) boot_sample(df = weather_df))
+  )
+
+boot_straps
+```
+
+Now let's get estimates for the two quantities of interest for each of oursamples. 
+
+```{r}
+boot_results = 
+  boot_straps |> 
+  mutate(
+    models = map(strap_sample, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    results = map(models, broom::tidy)
+  ) |> 
+  select(strap_number, models, results) |> 
+  unnest(results) |> 
+  select(strap_number, models, term, estimate, std.error) |>  
+  mutate(
+    r2 = map(models, broom::glance)
+  ) |> 
+  unnest(r2)
+
+compact_boot_results =
+  boot_results |> 
+  select(strap_number, models, term, estimate, r.squared) |> 
+  pivot_wider(names_from = term,
+              values_from = estimate) |> 
+  rename(beta_0 = "(Intercept)",
+         beta_1 = "tmin",
+         beta_2 = "prcp") |> 
+  mutate(
+    log_b1_b2 = log(beta_1 * beta_2)
+  )
+  
+compact_boot_results
+```
