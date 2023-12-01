@@ -1,7 +1,7 @@
 Homework 6
 ================
 Laura O’Carroll
-2023-11-28
+2023-11-30
 
 ## Problem 2
 
@@ -109,18 +109,18 @@ compact_boot_results
 ```
 
     ## # A tibble: 5,000 × 7
-    ##    strap_number models r.squared beta_0 beta_1   beta_2 log_b1_b2
-    ##           <int> <list>     <dbl>  <dbl>  <dbl>    <dbl>     <dbl>
-    ##  1            1 <lm>       0.919   8.08  0.998  0.00182     -6.31
-    ##  2            2 <lm>       0.928   7.80  1.06  -0.00671    NaN   
-    ##  3            3 <lm>       0.893   8.33  0.989  0.00563     -5.19
-    ##  4            4 <lm>       0.928   7.85  1.03  -0.00317    NaN   
-    ##  5            5 <lm>       0.909   8.00  0.999  0.00186     -6.29
-    ##  6            6 <lm>       0.923   8.17  1.01  -0.00242    NaN   
-    ##  7            7 <lm>       0.918   8.41  1.00  -0.00811    NaN   
-    ##  8            8 <lm>       0.942   7.75  1.04  -0.00627    NaN   
-    ##  9            9 <lm>       0.916   7.82  1.01   0.00497     -5.29
-    ## 10           10 <lm>       0.931   7.90  1.03  -0.00381    NaN   
+    ##    strap_number models r.squared beta_0 beta_1     beta_2 log_b1_b2
+    ##           <int> <list>     <dbl>  <dbl>  <dbl>      <dbl>     <dbl>
+    ##  1            1 <lm>       0.929   7.74   1.03 -0.000999     NaN   
+    ##  2            2 <lm>       0.913   7.83   1.02  0.0000509     -9.87
+    ##  3            3 <lm>       0.912   8.22   1.01 -0.00623      NaN   
+    ##  4            4 <lm>       0.904   8.00   1.01 -0.000294     NaN   
+    ##  5            5 <lm>       0.907   8.07   1.01 -0.00430      NaN   
+    ##  6            6 <lm>       0.918   7.89   1.02  0.00120       -6.70
+    ##  7            7 <lm>       0.935   8.07   1.03 -0.00714      NaN   
+    ##  8            8 <lm>       0.913   8.10   1.02  0.00119       -6.71
+    ##  9            9 <lm>       0.931   8.26   1.03 -0.00698      NaN   
+    ## 10           10 <lm>       0.928   7.75   1.06 -0.00762      NaN   
     ## # ℹ 4,990 more rows
 
 Importantly, because many of the $\hat{\beta_2}$ values calculated are
@@ -145,7 +145,7 @@ compact_boot_results |>
   geom_density()
 ```
 
-    ## Warning: Removed 3376 rows containing non-finite values (`stat_density()`).
+    ## Warning: Removed 3406 rows containing non-finite values (`stat_density()`).
 
 ![](Homework_6_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
@@ -165,11 +165,11 @@ compact_boot_results |>
 
 | rsq_ci_lower | rsq_ci_upper | log_beta_ci_lower | log_beta_ci_upper |
 |-------------:|-------------:|------------------:|------------------:|
-|        0.888 |         0.94 |            -9.202 |            -4.567 |
+|        0.889 |        0.941 |            -8.919 |            -4.609 |
 
-The estimate of $\hat{r^2}$ is 0.9170022, 95% CI \[0.8881248,
-0.9404097\]. The estimate of $log(\hat{\beta_1} * \hat{\beta_2})$ is
--6.138258, 95% CI \[-9.2024158, -4.5665181\].
+The estimate of $\hat{r^2}$ is 0.9173494, 95% CI \[0.8891391,
+0.9408917\]. The estimate of $log(\hat{\beta_1} * \hat{\beta_2})$ is
+-6.0972887, 95% CI \[-8.918926, -4.6086656\].
 
 It’s important to note that because the value of
 $log(\hat{\beta_1} * \hat{\beta_2})$ is the result of trying to take the
